@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OsteoAI — Results</title>
+  <link rel="stylesheet" href="static/style.css" />
+  <style>
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 700px) { .results-grid { grid-template-columns: 1fr; } }
+
+    .xray-img {
+      width: 100%;
+      border-radius: 10px;
+      display: block;
+      background: #000;
+    }
+
+    .prob-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 13px;
+    }
+    .prob-label { width: 60px; font-weight: 600; flex-shrink: 0; }
+    .prob-bar-wrap { flex: 1; }
+    .prob-val { width: 42px; text-align: right; color: var(--text-muted); flex-shrink: 0; }
+
+    .kl-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      font-size: 22px;
+      font-weight: 800;
+      background: var(--primary-light);
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+
+    .pain-meter {
+      position: relative;
+      height: 12px;
+      border-radius: 100px;
+      background: linear-gradient(to right, #16a34a, #65a30d, #d97706, #ea580c, #dc2626);
+      margin: 10px 0;
+    }
+    .pain-needle {
+      position: absolute;
+      top: -4px;
+      width: 20px;
+      height: 20px;
+      background: var(--surface);
+      border: 3px solid var(--primary);
+      border-radius: 50%;
+      transform: translateX(-50%);
+      transition: left 1s ease;
+    }
+
+    .gradcam-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tab-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+    .no-result {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+    .no-result h2 { font-size: 20px; margin-bottom: 8px; color: var(--text); }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>
+    </svg>
+    OsteoAI
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Upload</a></li>
+    <li><a href="results.html" class="active">Results</a></li>
+    <li><a href="recommendations.html">Recommendations</a></li>
+  </ul>
+  <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
+</nav>
+
+<div class="container page-content">
+  <div id="noResult" class="no-result" style="display:none">
+    <div style="font-size:48px;margin-bottom:16px">🩻</div>
+    <h2>No results yet</h2>
+    <p>Upload a knee X-ray on the home page to see predictions here.</p>
+    <a href="index.html" class="btn btn-primary" style="margin-top:20px">Go to Upload</a>
+  </div>
+
+  <div id="resultContent">
+    <div class="section-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2>Prediction Results</h2>
+        <p id="filenameLabel" style="color:var(--text-muted);font-size:14px"></p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <a href="recommendations.html" class="btn btn-primary" id="recomBtn">View Recommendations</a>
+        <a href="index.html" class="btn btn-ghost">New Analysis</a>
+      </div>
+    </div>
+
+    <!-- Metric summary row -->
+    <div class="metric-grid" style="margin-bottom:20px">
+      <div class="metric-card">
+        <div class="metric-value" id="klValue">—</div>
+        <div class="metric-label">KL Grade</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="jsnValue">—</div>
+        <div class="metric-label">JSN Severity</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-value" id="koosValue">—</div>
+        <div class="metric-label">KOOS Pain Score</div>
+      </div>
+      <div class="metric-card">
+        <div id="painBadge" class="metric-value" style="font-size:14px">—</div>
+        <div class="metric-label">Pain Level</div>
+      </div>
+    </div>
+
+    <div class="results-grid">
+      <!-- Left column -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        <!-- X-ray images -->
+        <div class="card">
+          <div class="card-title">🩻 X-ray Images</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <p style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Original</p>
+              <img id="origImg" class="xray-img" src="" alt="Original X-ray" style="min-height:160px;object-fit:cover" />
+            </div>
+            <div>
+              <p style="font-size:12px;color:var(--text-muted);margin-bottom:6px">ROI Crop</p>
+              <img id="roiImg" class="xray-img" src="" alt="ROI Cropped" style="min-height:160px;object-fit:cover" />
+            </div>
+          </div>
+        </div>
+
+        <!-- Grad-CAM -->
+        <div class="card">
+          <div class="card-title">🔥 Grad-CAM Explainability</div>
+          <div class="gradcam-tabs">
+            <button class="tab-btn active" data-task="kl">KL Grade</button>
+            <button class="tab-btn" data-task="jsn">JSN</button>
+            <button class="tab-btn" data-task="koos">KOOS</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div>
+              <p style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Heatmap</p>
+              <img id="heatmapImg" class="xray-img" src="" alt="Grad-CAM heatmap" style="min-height:140px;object-fit:cover" />
+            </div>
+            <div>
+              <p style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Overlay</p>
+              <img id="overlayImg" class="xray-img" src="" alt="Grad-CAM overlay" style="min-height:140px;object-fit:cover" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right column -->
+      <div style="display:flex;flex-direction:column;gap:16px">
+
+        <!-- KL Grade detail -->
+        <div class="card">
+          <div class="card-title">🦴 KL Grade Detail</div>
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+            <div>
+              <div class="kl-badge" id="klBadge">—</div>
+              <div id="klDesc" style="font-size:13px;color:var(--text-muted)"></div>
+            </div>
+            <div style="flex:1">
+              <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Severity scale</div>
+              <div class="severity-scale" id="severityScale">
+                <div class="severity-step"></div>
+                <div class="severity-step"></div>
+                <div class="severity-step"></div>
+                <div class="severity-step"></div>
+                <div class="severity-step"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:4px">
+                <span>Normal</span><span>Severe</span>
+              </div>
+            </div>
+          </div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-muted)">Ordinal probabilities</div>
+          <div id="klProbs"></div>
+        </div>
+
+        <!-- JSN detail -->
+        <div class="card">
+          <div class="card-title">📐 JSN Severity</div>
+          <div style="margin-bottom:12px">
+            <span id="jsnBadge" class="badge badge-blue" style="font-size:14px;padding:6px 14px">—</span>
+          </div>
+          <div style="font-size:13px;font-weight:600;margin-bottom:8px;color:var(--text-muted)">Class probabilities</div>
+          <div id="jsnProbs"></div>
+        </div>
+
+        <!-- KOOS detail -->
+        <div class="card">
+          <div class="card-title">📊 KOOS Pain Score</div>
+          <div style="font-size:36px;font-weight:800;color:var(--primary);margin-bottom:4px" id="koosLarge">—</div>
+          <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">out of 100 (higher = less pain)</div>
+          <div class="pain-meter">
+            <div class="pain-needle" id="painNeedle" style="left:50%"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-muted);margin-top:4px">
+            <span>Very High Pain</span><span>No Pain</span>
+          </div>
+          <hr class="divider" />
+          <div id="painLevelDetail" style="font-size:14px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  OsteoAI — Knee Osteoarthritis Severity Predictor &nbsp;·&nbsp; Research Use Only
+</footer>
+
+<script>
+  // ── Theme ──
+  const root = document.documentElement;
+  const toggle = document.getElementById('themeToggle');
+  const saved = localStorage.getItem('theme') || 'light';
+  root.setAttribute('data-theme', saved);
+  toggle.textContent = saved === 'dark' ? '☀️' : '🌙';
+  toggle.addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    toggle.textContent = next === 'dark' ? '☀️' : '🌙';
+  });
+
+  // ── KL descriptions ──
+  const KL_DESC = ['Normal — no OA features', 'Doubtful — possible osteophytes', 'Mild — definite osteophytes', 'Moderate — joint space narrowing', 'Severe — large osteophytes, marked narrowing'];
+  const KL_BADGE_CLASS = ['badge-green', 'badge-green', 'badge-yellow', 'badge-orange', 'badge-red'];
+  const JSN_LABELS = ['None', 'Mild/Moderate', 'Definite', 'Severe'];
+  const JSN_BADGE = ['badge-green', 'badge-yellow', 'badge-orange', 'badge-red'];
+
+  function painLevel(score) {
+    if (score >= 85) return { label: 'Low Pain', cls: 'badge-green', desc: 'Minimal pain impact on daily activities.' };
+    if (score >= 60) return { label: 'Moderate Pain', cls: 'badge-yellow', desc: 'Noticeable pain affecting some activities.' };
+    if (score >= 35) return { label: 'High Pain', cls: 'badge-orange', desc: 'Significant pain limiting daily function.' };
+    return { label: 'Very High Pain', cls: 'badge-red', desc: 'Severe pain with major functional limitations.' };
+  }
+
+  function renderProbBars(container, labels, probs) {
+    container.innerHTML = '';
+    labels.forEach((lbl, i) => {
+      const pct = (probs[i] * 100).toFixed(1);
+      const row = document.createElement('div');
+      row.className = 'prob-row';
+      row.innerHTML = `
+        <span class="prob-label">${lbl}</span>
+        <div class="prob-bar-wrap">
+          <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+        </div>
+        <span class="prob-val">${pct}%</span>`;
+      container.appendChild(row);
+    });
+  }
+
+  // ── Load result ──
+  const raw = sessionStorage.getItem('oaResult');
+
+  // Demo data for direct page visits
+  const DEMO = {
+    filename: 'demo_9082159L.png',
+    kl_grade: 3,
+    jsn_severity: 1,
+    koos_score: 77.31,
+    kl_probs: [0.999, 1.000, 0.999, 0.0009],
+    jsn_probs: [0.0334, 0.848, 0.0781, 0.0407],
+    orig_image: null,
+    roi_image: null,
+    gradcam_kl_heatmap: null,
+    gradcam_kl_overlay: null,
+    gradcam_jsn_heatmap: null,
+    gradcam_jsn_overlay: null,
+    gradcam_koos_heatmap: null,
+    gradcam_koos_overlay: null,
+  };
+
+  const data = raw ? JSON.parse(raw) : DEMO;
+
+  // Populate
+  document.getElementById('filenameLabel').textContent = data.filename || '';
+  document.getElementById('klValue').textContent = data.kl_grade;
+  document.getElementById('jsnValue').textContent = JSN_LABELS[data.jsn_severity] || data.jsn_severity;
+  document.getElementById('koosValue').textContent = data.koos_score.toFixed(1);
+  document.getElementById('koosLarge').textContent = data.koos_score.toFixed(1);
+
+  // KL badge + scale
+  const klBadge = document.getElementById('klBadge');
+  klBadge.textContent = data.kl_grade;
+  klBadge.className = `kl-badge`;
+  document.getElementById('klDesc').textContent = KL_DESC[data.kl_grade] || '';
+
+  const steps = document.querySelectorAll('.severity-step');
+  steps.forEach((s, i) => {
+    if (i <= data.kl_grade) s.classList.add('active', `kl-${data.kl_grade}`);
+  });
+
+  // Pain
+  const pl = painLevel(data.koos_score);
+  document.getElementById('painBadge').innerHTML = `<span class="badge ${pl.cls}">${pl.label}</span>`;
+  document.getElementById('painNeedle').style.left = data.koos_score + '%';
+  document.getElementById('painLevelDetail').innerHTML = `<span class="badge ${pl.cls}" style="margin-bottom:8px">${pl.label}</span><br><span style="color:var(--text-muted)">${pl.desc}</span>`;
+
+  // JSN badge
+  const jsnBadge = document.getElementById('jsnBadge');
+  jsnBadge.textContent = JSN_LABELS[data.jsn_severity] || data.jsn_severity;
+  jsnBadge.className = `badge ${JSN_BADGE[data.jsn_severity] || 'badge-blue'}`;
+
+  // Prob bars
+  if (data.kl_probs) renderProbBars(document.getElementById('klProbs'), ['KL≥1', 'KL≥2', 'KL≥3', 'KL≥4'], data.kl_probs);
+  if (data.jsn_probs) renderProbBars(document.getElementById('jsnProbs'), JSN_LABELS, data.jsn_probs);
+
+  // Images
+  function setImg(id, b64) {
+    if (b64) document.getElementById(id).src = 'data:image/png;base64,' + b64;
+    else document.getElementById(id).style.display = 'none';
+  }
+  setImg('origImg', data.orig_image);
+  setImg('roiImg', data.roi_image);
+  setImg('heatmapImg', data.gradcam_kl_heatmap);
+  setImg('overlayImg', data.gradcam_kl_overlay);
+
+  // Grad-CAM tabs
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const task = btn.dataset.task;
+      setImg('heatmapImg', data[`gradcam_${task}_heatmap`]);
+      setImg('overlayImg', data[`gradcam_${task}_overlay`]);
+    });
+  });
+
+  // Pass KL grade to recommendations page
+  document.getElementById('recomBtn').href = `recommendations.html?kl=${data.kl_grade}&jsn=${data.jsn_severity}&koos=${data.koos_score.toFixed(1)}`;
+</script>
+</body>
+</html>

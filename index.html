@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OsteoAI — Knee OA Severity Predictor</title>
+  <link rel="stylesheet" href="static/style.css" />
+  <style>
+    .upload-section { padding: 40px 0 60px; }
+    .upload-grid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+    @media (max-width: 768px) { .upload-grid { grid-template-columns: 1fr; } }
+
+    .info-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .info-list li {
+      display: flex; align-items: flex-start; gap: 10px;
+      font-size: 14px; color: var(--text-muted);
+    }
+    .info-list li .icon {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: var(--primary-light); color: var(--primary);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 14px;
+    }
+
+    .model-info { margin-top: 16px; }
+    .model-info-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0; border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .model-info-row:last-child { border-bottom: none; }
+    .model-info-row .key { color: var(--text-muted); }
+    .model-info-row .val { font-weight: 600; }
+
+    #analyzeBtn { width: 100%; margin-top: 16px; justify-content: center; padding: 12px; font-size: 15px; }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="nav-brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>
+    </svg>
+    OsteoAI
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html" class="active">Upload</a></li>
+    <li><a href="results.html">Results</a></li>
+    <li><a href="recommendations.html">Recommendations</a></li>
+  </ul>
+  <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-content">
+    <div class="hero-badge">
+      <span>🔬</span> AI-Powered Medical Imaging
+    </div>
+    <h1>Knee Osteoarthritis<br>Severity Prediction</h1>
+    <p>Upload a knee X-ray and get instant KL grade classification, joint space narrowing assessment, and KOOS pain score estimation — powered by deep learning.</p>
+    <div class="hero-actions">
+      <a href="#upload" class="btn btn-primary">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload X-ray
+      </a>
+      <a href="results.html" class="btn btn-outline">View Example Results</a>
+    </div>
+    <div class="hero-stats">
+      <div class="hero-stat">
+        <div class="value">69.0%</div>
+        <div class="label">KL Grade Accuracy</div>
+      </div>
+      <div class="hero-stat">
+        <div class="value">0.850</div>
+        <div class="label">KL Quadratic Kappa</div>
+      </div>
+      <div class="hero-stat">
+        <div class="value">6,759</div>
+        <div class="label">Training Images</div>
+      </div>
+      <div class="hero-stat">
+        <div class="value">3</div>
+        <div class="label">Prediction Targets</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<div class="container">
+  <div class="feature-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🦴</div>
+      <h3>KL Grade Classification</h3>
+      <p>Predicts Kellgren-Lawrence grade (0–4) using ordinal regression with per-threshold tuning.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📐</div>
+      <h3>JSN Severity</h3>
+      <p>Classifies joint space narrowing into none, mild/moderate, definite, or severe categories.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3>KOOS Pain Score</h3>
+      <p>Estimates the KOOS pain subscale score (0–100) as a continuous regression output.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔥</div>
+      <h3>Grad-CAM Explainability</h3>
+      <p>Visualizes which regions of the X-ray influenced the model's prediction via gradient heatmaps.</p>
+    </div>
+  </div>
+</div>
+
+<!-- UPLOAD -->
+<div class="container upload-section" id="upload">
+  <div class="section-header">
+    <h2>Upload X-ray Image</h2>
+    <p>Accepts PNG or JPG knee X-ray images. Results are returned in seconds.</p>
+  </div>
+
+  <div class="upload-grid">
+    <!-- Left: dropzone + preview -->
+    <div>
+      <div class="card">
+        <div id="dropzone" class="dropzone">
+          <div class="dropzone-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <h3>Drag & drop your X-ray here</h3>
+          <p>PNG or JPG, up to 10 MB</p>
+          <button type="button" class="btn btn-ghost" id="fileBtn">Browse files</button>
+        </div>
+        <div id="previewGrid" class="preview-grid"></div>
+        <button id="analyzeBtn" class="btn btn-primary" disabled>
+          Analyze X-ray
+        </button>
+      </div>
+    </div>
+
+    <!-- Right: info panel -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="card-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          What you'll get
+        </div>
+        <ul class="info-list">
+          <li><span class="icon">🦴</span><span>KL grade (0–4) with ordinal probability breakdown</span></li>
+          <li><span class="icon">📐</span><span>JSN severity classification with confidence scores</span></li>
+          <li><span class="icon">📊</span><span>Estimated KOOS pain score and pain level category</span></li>
+          <li><span class="icon">🔥</span><span>Grad-CAM heatmap highlighting key regions</span></li>
+          <li><span class="icon">💊</span><span>Personalized clinical recommendations</span></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Model Info
+        </div>
+        <div class="model-info">
+          <div class="model-info-row"><span class="key">Backbone</span><span class="val">ConvNeXt-Small</span></div>
+          <div class="model-info-row"><span class="key">Pretrained</span><span class="val">ImageNet-22K</span></div>
+          <div class="model-info-row"><span class="key">Pooling</span><span class="val">GeM</span></div>
+          <div class="model-info-row"><span class="key">TTA Runs</span><span class="val">5</span></div>
+          <div class="model-info-row"><span class="key">Input Size</span><span class="val">224 × 224</span></div>
+        </div>
+      </div>
+
+      <div class="alert alert-warning">
+        <span>⚠️</span>
+        <span>This tool is for research purposes only and is not a substitute for professional medical diagnosis.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  OsteoAI — Knee Osteoarthritis Severity Predictor &nbsp;·&nbsp; Research Use Only
+</footer>
+
+<input id="fileInput" type="file" accept="image/*" style="display:none" />
+
+<script>
+  // ── Theme ──
+  const root = document.documentElement;
+  const toggle = document.getElementById('themeToggle');
+  const saved = localStorage.getItem('theme') || 'light';
+  root.setAttribute('data-theme', saved);
+  toggle.textContent = saved === 'dark' ? '☀️' : '🌙';
+  toggle.addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    toggle.textContent = next === 'dark' ? '☀️' : '🌙';
+  });
+
+  // ── Upload ──
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const fileBtn = document.getElementById('fileBtn');
+  const previewGrid = document.getElementById('previewGrid');
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  let selectedFile = null;
+
+  fileBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', e => {
+    if (e.target.files[0]) setFile(e.target.files[0]);
+    fileInput.value = '';
+  });
+
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault();
+    dropzone.classList.remove('dragover');
+    const f = e.dataTransfer.files[0];
+    if (f && f.type.startsWith('image/')) setFile(f);
+  });
+
+  function setFile(f) {
+    selectedFile = f;
+    const url = URL.createObjectURL(f);
+    previewGrid.innerHTML = `
+      <div class="preview-item">
+        <img src="${url}" alt="preview">
+        <div class="preview-item-info">${f.name}</div>
+        <button class="preview-remove" id="removeBtn">✕</button>
+      </div>`;
+    document.getElementById('removeBtn').addEventListener('click', () => {
+      selectedFile = null;
+      previewGrid.innerHTML = '';
+      analyzeBtn.disabled = true;
+    });
+    analyzeBtn.disabled = false;
+  }
+
+  analyzeBtn.addEventListener('click', async () => {
+    if (!selectedFile) return;
+
+    analyzeBtn.disabled = true;
+    analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const res = await fetch('/predict', { method: 'POST', body: formData });
+      if (!res.ok) throw new Error('Server error: ' + res.status);
+      const data = await res.json();
+      // Store result and navigate
+      sessionStorage.setItem('oaResult', JSON.stringify(data));
+      window.location.href = 'results.html';
+    } catch (err) {
+      alert('Error: ' + err.message);
+      analyzeBtn.disabled = false;
+      analyzeBtn.innerHTML = 'Analyze X-ray';
+    }
+  });
+</script>
+</body>
+</html>

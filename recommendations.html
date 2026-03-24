@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OsteoAI — Recommendations</title>
+  <link rel="stylesheet" href="static/style.css" />
+  <style>
+    .recom-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+    @media (max-width: 700px) { .recom-grid { grid-template-columns: 1fr; } }
+
+    .recom-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .recom-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 14px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 14px;
+    }
+    .recom-item .icon {
+      font-size: 18px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .recom-item strong { display: block; margin-bottom: 2px; }
+    .recom-item span { color: var(--text-muted); font-size: 13px; }
+
+    .summary-card {
+      background: var(--primary);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 24px;
+    }
+    .summary-card .label { font-size: 12px; opacity: 0.75; margin-bottom: 2px; }
+    .summary-card .value { font-size: 22px; font-weight: 800; }
+    .summary-row { margin-bottom: 16px; }
+    .summary-row:last-child { margin-bottom: 0; }
+
+    .urgency-bar {
+      display: flex;
+      gap: 4px;
+      margin-top: 8px;
+    }
+    .urgency-step {
+      flex: 1;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.25);
+    }
+    .urgency-step.active { background: #fff; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="index.html" class="nav-brand">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+      <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/>
+    </svg>
+    OsteoAI
+  </a>
+  <ul class="nav-links">
+    <li><a href="index.html">Upload</a></li>
+    <li><a href="results.html">Results</a></li>
+    <li><a href="recommendations.html" class="active">Recommendations</a></li>
+  </ul>
+  <button class="theme-toggle" id="themeToggle" title="Toggle dark mode">🌙</button>
+</nav>
+
+<div class="container page-content">
+  <div class="section-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px">
+    <div>
+      <h2>Clinical Recommendations</h2>
+      <p id="subheading" style="color:var(--text-muted);font-size:14px">Based on your prediction results</p>
+    </div>
+    <div style="display:flex;gap:8px">
+      <a href="results.html" class="btn btn-ghost">← Back to Results</a>
+      <a href="index.html" class="btn btn-primary">New Analysis</a>
+    </div>
+  </div>
+
+  <div class="alert alert-warning" style="margin-bottom:20px">
+    <span>⚠️</span>
+    <span>These recommendations are AI-generated for informational purposes only. Always consult a qualified healthcare professional for medical advice and treatment decisions.</span>
+  </div>
+
+  <div class="recom-grid">
+    <!-- Left: summary -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div class="summary-card">
+        <div class="summary-row">
+          <div class="label">KL Grade</div>
+          <div class="value" id="sumKL">—</div>
+          <div style="font-size:13px;opacity:0.8;margin-top:2px" id="sumKLDesc"></div>
+        </div>
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,0.2);margin:14px 0">
+        <div class="summary-row">
+          <div class="label">JSN Severity</div>
+          <div class="value" id="sumJSN">—</div>
+        </div>
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,0.2);margin:14px 0">
+        <div class="summary-row">
+          <div class="label">KOOS Pain Score</div>
+          <div class="value" id="sumKOOS">—</div>
+        </div>
+        <hr style="border:none;border-top:1px solid rgba(255,255,255,0.2);margin:14px 0">
+        <div class="summary-row">
+          <div class="label">Urgency Level</div>
+          <div class="value" id="sumUrgency">—</div>
+          <div class="urgency-bar" id="urgencyBar">
+            <div class="urgency-step"></div>
+            <div class="urgency-step"></div>
+            <div class="urgency-step"></div>
+            <div class="urgency-step"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📅 Follow-up Schedule</div>
+        <div id="followup" style="font-size:14px;color:var(--text-muted);line-height:1.6"></div>
+      </div>
+    </div>
+
+    <!-- Right: recommendations -->
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card" id="physioCard">
+        <div class="card-title">🏃 Physical Activity & Physiotherapy</div>
+        <ul class="recom-list" id="physioList"></ul>
+      </div>
+
+      <div class="card" id="medCard">
+        <div class="card-title">💊 Pain Management</div>
+        <ul class="recom-list" id="medList"></ul>
+      </div>
+
+      <div class="card" id="lifestyleCard">
+        <div class="card-title">🥗 Lifestyle Modifications</div>
+        <ul class="recom-list" id="lifestyleList"></ul>
+      </div>
+
+      <div class="card" id="monitorCard">
+        <div class="card-title">🔍 Monitoring & Next Steps</div>
+        <ul class="recom-list" id="monitorList"></ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  OsteoAI — Knee Osteoarthritis Severity Predictor &nbsp;·&nbsp; Research Use Only
+</footer>
+
+<script>
+  // ── Theme ──
+  const root = document.documentElement;
+  const toggle = document.getElementById('themeToggle');
+  const saved = localStorage.getItem('theme') || 'light';
+  root.setAttribute('data-theme', saved);
+  toggle.textContent = saved === 'dark' ? '☀️' : '🌙';
+  toggle.addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    toggle.textContent = next === 'dark' ? '☀️' : '🌙';
+  });
+
+  const JSN_LABELS = ['None', 'Mild/Moderate', 'Definite', 'Severe'];
+  const KL_DESC = ['Normal', 'Doubtful OA', 'Mild OA', 'Moderate OA', 'Severe OA'];
+
+  // ── Read params ──
+  const params = new URLSearchParams(window.location.search);
+  const raw = sessionStorage.getItem('oaResult');
+  let kl = parseInt(params.get('kl') ?? (raw ? JSON.parse(raw).kl_grade : 2));
+  let jsn = parseInt(params.get('jsn') ?? (raw ? JSON.parse(raw).jsn_severity : 1));
+  let koos = parseFloat(params.get('koos') ?? (raw ? JSON.parse(raw).koos_score : 77));
+
+  if (isNaN(kl)) kl = 2;
+  if (isNaN(jsn)) jsn = 1;
+  if (isNaN(koos)) koos = 77;
+
+  // ── Recommendation database ──
+  const RECS = {
+    0: {
+      urgency: 1,
+      followup: 'Annual check-up recommended. No immediate intervention needed.',
+      physio: [
+        { icon: '🚴', title: 'Maintain active lifestyle', desc: 'Regular low-impact exercise such as cycling or swimming.' },
+        { icon: '🧘', title: 'Flexibility training', desc: 'Yoga or stretching to maintain joint range of motion.' },
+      ],
+      med: [
+        { icon: '💊', title: 'No medication required', desc: 'Over-the-counter analgesics only if occasional discomfort arises.' },
+      ],
+      lifestyle: [
+        { icon: '⚖️', title: 'Maintain healthy weight', desc: 'BMI within normal range reduces joint load significantly.' },
+        { icon: '🥗', title: 'Anti-inflammatory diet', desc: 'Omega-3 rich foods, fruits, and vegetables.' },
+      ],
+      monitor: [
+        { icon: '📅', title: 'Annual X-ray review', desc: 'Monitor for early OA signs annually.' },
+      ],
+    },
+    1: {
+      urgency: 1,
+      followup: 'Follow-up in 6–12 months. Monitor for symptom progression.',
+      physio: [
+        { icon: '🚴', title: 'Low-impact aerobic exercise', desc: 'Swimming, cycling, or walking 30 min/day, 5 days/week.' },
+        { icon: '💪', title: 'Quadriceps strengthening', desc: 'Targeted exercises to reduce knee joint load.' },
+      ],
+      med: [
+        { icon: '💊', title: 'Topical NSAIDs if needed', desc: 'Diclofenac gel for localized pain relief.' },
+        { icon: '🧴', title: 'Consider glucosamine', desc: 'Discuss supplementation with your physician.' },
+      ],
+      lifestyle: [
+        { icon: '⚖️', title: 'Weight management', desc: 'Each kg lost reduces knee load by ~4 kg.' },
+        { icon: '👟', title: 'Supportive footwear', desc: 'Cushioned shoes or orthotics to reduce impact.' },
+      ],
+      monitor: [
+        { icon: '📅', title: 'Follow-up in 6 months', desc: 'Reassess symptoms and X-ray findings.' },
+        { icon: '📝', title: 'Pain diary', desc: 'Track pain levels and triggers daily.' },
+      ],
+    },
+    2: {
+      urgency: 2,
+      followup: 'Follow-up in 3–6 months. Consider physiotherapy referral.',
+      physio: [
+        { icon: '🏊', title: 'Hydrotherapy', desc: 'Water-based exercise reduces joint stress while building strength.' },
+        { icon: '💪', title: 'Structured physiotherapy', desc: 'Formal PT program focusing on knee stabilization.' },
+        { icon: '🚶', title: 'Walking aids if needed', desc: 'Cane or walking stick to offload the affected knee.' },
+      ],
+      med: [
+        { icon: '💊', title: 'Oral NSAIDs (short-term)', desc: 'Ibuprofen or naproxen under physician supervision.' },
+        { icon: '💉', title: 'Consider intra-articular injection', desc: 'Corticosteroid or hyaluronic acid injection may provide relief.' },
+      ],
+      lifestyle: [
+        { icon: '⚖️', title: 'Weight loss program', desc: 'Target 5–10% body weight reduction if overweight.' },
+        { icon: '🪑', title: 'Activity modification', desc: 'Avoid high-impact activities like running or jumping.' },
+        { icon: '🛏️', title: 'Rest and recovery', desc: 'Balance activity with adequate rest periods.' },
+      ],
+      monitor: [
+        { icon: '📅', title: 'Follow-up in 3 months', desc: 'Reassess pain, function, and X-ray progression.' },
+        { icon: '🩺', title: 'Orthopedic consultation', desc: 'Consider referral to orthopedic specialist.' },
+      ],
+    },
+    3: {
+      urgency: 3,
+      followup: 'Urgent follow-up within 4–8 weeks. Orthopedic referral recommended.',
+      physio: [
+        { icon: '🏊', title: 'Aquatic therapy', desc: 'Supervised water-based rehabilitation program.' },
+        { icon: '🦯', title: 'Assistive devices', desc: 'Knee brace, cane, or walker to reduce joint load.' },
+        { icon: '💪', title: 'Supervised PT', desc: 'Formal physiotherapy with a licensed therapist.' },
+      ],
+      med: [
+        { icon: '💊', title: 'Multimodal pain management', desc: 'Combination of NSAIDs, acetaminophen, and topical agents.' },
+        { icon: '💉', title: 'Intra-articular injections', desc: 'Corticosteroid injections for acute flares.' },
+        { icon: '🧪', title: 'Discuss opioid alternatives', desc: 'Duloxetine or tramadol under specialist supervision.' },
+      ],
+      lifestyle: [
+        { icon: '⚖️', title: 'Structured weight loss', desc: 'Medically supervised weight management program.' },
+        { icon: '🪑', title: 'Significant activity modification', desc: 'Avoid all high-impact activities.' },
+        { icon: '🏠', title: 'Home modifications', desc: 'Grab bars, raised toilet seat, stair rails.' },
+      ],
+      monitor: [
+        { icon: '🩺', title: 'Orthopedic referral', desc: 'Urgent referral for surgical evaluation.' },
+        { icon: '📅', title: 'Follow-up in 4–8 weeks', desc: 'Close monitoring of pain and functional decline.' },
+        { icon: '🔬', title: 'MRI consideration', desc: 'Advanced imaging to assess cartilage and soft tissue.' },
+      ],
+    },
+    4: {
+      urgency: 4,
+      followup: 'Immediate orthopedic referral. Surgical evaluation required.',
+      physio: [
+        { icon: '🦯', title: 'Assistive devices essential', desc: 'Knee brace, walker, or wheelchair as needed.' },
+        { icon: '🏊', title: 'Aquatic therapy only', desc: 'Land-based exercise may be too painful; water therapy preferred.' },
+        { icon: '🏥', title: 'Pre-surgical rehabilitation', desc: 'Prehab program to optimize surgical outcomes.' },
+      ],
+      med: [
+        { icon: '💊', title: 'Aggressive pain management', desc: 'Multimodal analgesia under specialist care.' },
+        { icon: '💉', title: 'Palliative injections', desc: 'Corticosteroid injections for temporary relief while awaiting surgery.' },
+      ],
+      lifestyle: [
+        { icon: '🪑', title: 'Minimize weight-bearing', desc: 'Reduce standing and walking time significantly.' },
+        { icon: '🏠', title: 'Home adaptations', desc: 'Comprehensive home modification for safety and mobility.' },
+        { icon: '🧠', title: 'Psychological support', desc: 'Chronic pain counseling and coping strategies.' },
+      ],
+      monitor: [
+        { icon: '🏥', title: 'Surgical evaluation', desc: 'Total knee arthroplasty (TKA) is likely indicated.' },
+        { icon: '🩺', title: 'Immediate orthopedic referral', desc: 'Do not delay specialist consultation.' },
+        { icon: '📋', title: 'Surgical planning', desc: 'Pre-operative assessment and optimization.' },
+      ],
+    },
+  };
+
+  const urgencyLabels = ['', 'Routine', 'Moderate', 'High', 'Urgent'];
+
+  function renderList(id, items) {
+    const ul = document.getElementById(id);
+    ul.innerHTML = '';
+    items.forEach(item => {
+      const li = document.createElement('li');
+      li.className = 'recom-item';
+      li.innerHTML = `<span class="icon">${item.icon}</span><div><strong>${item.title}</strong><span>${item.desc}</span></div>`;
+      ul.appendChild(li);
+    });
+  }
+
+  const rec = RECS[kl] || RECS[2];
+
+  document.getElementById('subheading').textContent = `KL Grade ${kl} — ${KL_DESC[kl]}`;
+  document.getElementById('sumKL').textContent = `Grade ${kl}`;
+  document.getElementById('sumKLDesc').textContent = KL_DESC[kl];
+  document.getElementById('sumJSN').textContent = JSN_LABELS[jsn] || jsn;
+  document.getElementById('sumKOOS').textContent = koos.toFixed ? koos.toFixed(1) : koos;
+  document.getElementById('sumUrgency').textContent = urgencyLabels[rec.urgency];
+  document.getElementById('followup').textContent = rec.followup;
+
+  // Urgency bar
+  const urgencySteps = document.querySelectorAll('.urgency-step');
+  urgencySteps.forEach((s, i) => { if (i < rec.urgency) s.classList.add('active'); });
+
+  renderList('physioList', rec.physio);
+  renderList('medList', rec.med);
+  renderList('lifestyleList', rec.lifestyle);
+  renderList('monitorList', rec.monitor);
+</script>
+</body>
+</html>

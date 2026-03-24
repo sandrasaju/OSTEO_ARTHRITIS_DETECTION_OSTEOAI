@@ -1,0 +1,19 @@
+# Model weights (too large for GitHub)
+*.pth
+*.pt
+
+# NumPy arrays (optional - comment out if you want to include thresholds)
+# *.npy
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+venv/
+env/
+
+# OS
+.DS_Store
+Thumbs.db
