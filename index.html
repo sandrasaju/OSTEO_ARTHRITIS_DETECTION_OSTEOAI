@@ -5,35 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>OsteoAI — Knee OA Severity Predictor</title>
   <link rel="stylesheet" href="static/style.css" />
-  <style>
-    .upload-section { padding: 40px 0 60px; }
-    .upload-grid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
-    @media (max-width: 768px) { .upload-grid { grid-template-columns: 1fr; } }
-
-    .info-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
-    .info-list li {
-      display: flex; align-items: flex-start; gap: 10px;
-      font-size: 14px; color: var(--text-muted);
-    }
-    .info-list li .icon {
-      width: 28px; height: 28px; border-radius: 8px;
-      background: var(--primary-light); color: var(--primary);
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; font-size: 14px;
-    }
-
-    .model-info { margin-top: 16px; }
-    .model-info-row {
-      display: flex; justify-content: space-between; align-items: center;
-      padding: 8px 0; border-bottom: 1px solid var(--border);
-      font-size: 13px;
-    }
-    .model-info-row:last-child { border-bottom: none; }
-    .model-info-row .key { color: var(--text-muted); }
-    .model-info-row .val { font-weight: 600; }
-
-    #analyzeBtn { width: 100%; margin-top: 16px; justify-content: center; padding: 12px; font-size: 15px; }
-  </style>
+  <link rel="stylesheet" href="static/index.css" />
 </head>
 <body>
 
@@ -189,83 +161,7 @@
 
 <input id="fileInput" type="file" accept="image/*" style="display:none" />
 
-<script>
-  // ── Theme ──
-  const root = document.documentElement;
-  const toggle = document.getElementById('themeToggle');
-  const saved = localStorage.getItem('theme') || 'light';
-  root.setAttribute('data-theme', saved);
-  toggle.textContent = saved === 'dark' ? '☀️' : '🌙';
-  toggle.addEventListener('click', () => {
-    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    root.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
-    toggle.textContent = next === 'dark' ? '☀️' : '🌙';
-  });
-
-  // ── Upload ──
-  const dropzone = document.getElementById('dropzone');
-  const fileInput = document.getElementById('fileInput');
-  const fileBtn = document.getElementById('fileBtn');
-  const previewGrid = document.getElementById('previewGrid');
-  const analyzeBtn = document.getElementById('analyzeBtn');
-  let selectedFile = null;
-
-  fileBtn.addEventListener('click', () => fileInput.click());
-
-  fileInput.addEventListener('change', e => {
-    if (e.target.files[0]) setFile(e.target.files[0]);
-    fileInput.value = '';
-  });
-
-  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
-  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
-  dropzone.addEventListener('drop', e => {
-    e.preventDefault();
-    dropzone.classList.remove('dragover');
-    const f = e.dataTransfer.files[0];
-    if (f && f.type.startsWith('image/')) setFile(f);
-  });
-
-  function setFile(f) {
-    selectedFile = f;
-    const url = URL.createObjectURL(f);
-    previewGrid.innerHTML = `
-      <div class="preview-item">
-        <img src="${url}" alt="preview">
-        <div class="preview-item-info">${f.name}</div>
-        <button class="preview-remove" id="removeBtn">✕</button>
-      </div>`;
-    document.getElementById('removeBtn').addEventListener('click', () => {
-      selectedFile = null;
-      previewGrid.innerHTML = '';
-      analyzeBtn.disabled = true;
-    });
-    analyzeBtn.disabled = false;
-  }
-
-  analyzeBtn.addEventListener('click', async () => {
-    if (!selectedFile) return;
-
-    analyzeBtn.disabled = true;
-    analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
-
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-
-    try {
-      const res = await fetch('/predict', { method: 'POST', body: formData });
-      if (!res.ok) throw new Error('Server error: ' + res.status);
-      const data = await res.json();
-      // Store result and navigate
-      sessionStorage.setItem('oaResult', JSON.stringify(data));
-      window.location.href = 'results.html';
-    } catch (err) {
-      alert('Error: ' + err.message);
-      analyzeBtn.disabled = false;
-      analyzeBtn.innerHTML = 'Analyze X-ray';
-    }
-  });
-</script>
+<script src="static/theme.js"></script>
+<script src="static/index.js"></script>
 </body>
 </html>
