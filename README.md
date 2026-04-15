@@ -182,7 +182,5 @@ http://127.0.0.1:5000
 `Python` &nbsp;`PyTorch` &nbsp;`timm` &nbsp;`Flask` &nbsp;`ConvNeXt` &nbsp;`Grad-CAM` &nbsp;`HTML` &nbsp;`CSS` &nbsp;`JavaScript`
 <img width="1035" height="839" alt="image" src="https://github.com/user-attachments/assets/f46af4fc-7233-45b6-b5e2-6186a381e49f" />
 <img width="785" height="563" alt="image" src="https://github.com/user-attachments/assets/44b83e82-5739-4c98-be6b-554851f7463f" />
-<img width="880" height="806" alt="image" src="https://github.com/user-attachments/assets/1206ef07-fea1-4efe-a671-da34afd045bd" />
 <img width="858" height="875" alt="image" src="https://github.com/user-attachments/assets/a030a48b-b3ae-4a7b-a8b9-7e0a70afa4c1" />
-
-
+<img width="880" height="806" alt="image" src="https://github.com/user-attachments/assets/1206ef07-fea1-4efe-a671-da34afd045bd" />
