@@ -176,11 +176,6 @@ http://127.0.0.1:5000
 
 ---
 
-## ⚠️ Disclaimer
-
-This tool is intended for **research purposes only** and is **not a substitute** for professional medical diagnosis. Always consult a qualified healthcare professional for medical advice and treatment decisions.
-
----
 
 ## 🛠️ Tech Stack
 
